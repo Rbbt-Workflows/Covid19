@@ -1,15 +1,8 @@
 %h1 Covid19
 
+- require_relative '../helpers'
 - require 'rbbt/util/ssh'
-- servers = %w(turbo mn1)
-- sample_info = Covid19.job(:sample_info).run
+- data_server = Covid19.data_servers
 
-%ul
-  - sample_info.each do |sample, group|
-    %li
-      = sample
-      - data_servers = servers.select{|s| SSHLine.workflow(s, 'Covid19', "puts Covid19.GSE145926.glob('*#{sample}*feature*').any?").strip == 'true' }
-      Data in:
-      = data_servers * ", "
-
+- job = Covid19.job(:meta_analysis, nil, :meta_file => Rbbt.data["metadata_clean.tsv"] )
 

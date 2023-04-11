@@ -13,8 +13,14 @@ Covid19=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *.
   test_helper.rb
  }
  data=data filter="*"{
+  epithelial_cell_2.bnd
+  epithelial_cell_2.cfg
+  inputs.txt
+  metadata.tsv
+  outputs.txt
  }
  www=www{
+  helpers.rb
   views=views{
    main.haml
   }

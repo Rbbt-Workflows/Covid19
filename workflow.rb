@@ -16,9 +16,13 @@ module Covid19
   Known sample info in GSE145926 dataset
   EOF
   task :sample_info => :tsv do
-    tsv = Rbbt.data.metadata.tsv :header_hash => "", :type => :single, :fields => %(group)
+    tsv = Rbbt.data.metadata.tsv :header_hash => "", :type => :list
+    tsv.delete_if{|s,v| s != "C141" }
     tsv.key_field = "Sample"
-    tsv.fields = ["Group"]
+    tsv.fields = ["Group", "File"]
+    tsv.process "File" do |file|
+      Covid19.GSE145926[File.basename(file)]
+    end
     tsv
   end
 
@@ -26,12 +30,17 @@ module Covid19
   Process single cell data for a patient
   EOF
   dep_task :single_cell_processing, PerMedCoE, :single_cell_processing_BB, 
-    :p_id => :jobname, :p_file => :placeholder  do |jobname,options|
+    :p_id => :jobname do |jobname,options|
 
       options[:p_id] = jobname
-      file = Covid19.GSE145926.produce.glob("*_#{jobname}_*.h5").first 
-      raise ParameterException, "File not found for sample id #{jobname} (jobname)" if file.nil?
-      options[:p_file] = file
+
+      if options[:p_file].nil?
+        file = Covid19.GSE145926.produce.glob("*_#{jobname}_*.h5").first 
+        file = Covid19.identify(file)
+        raise ParameterException, "File not found for sample id #{jobname} (jobname)" if file.nil?
+        options[:p_file] = file
+      end
+
       {:inputs => options}
     end
 
@@ -96,12 +105,15 @@ module Covid19
   dep :PhysiBoSS, :max_time => 100, :p_group => :placeholder, :repetition => :placeholder do |jobname,options|
 
     metadata_file = options[:meta_file]
-    tsv = TSV.open(metadata_file, :header_hash => '', :type => :list)
+    if Step === metadata_file || Open.read(metadata_file).start_with?("#")
+      tsv = TSV.open(metadata_file)
+    else
+      tsv = TSV.open(metadata_file, :header_hash => '', :type => :single)
+    end
     tsv.collect do |id,values|
       group, file = values
-      file = File.basename(file)
       options[:repetitions].times.collect do |rep|
-        {:inputs => options.merge(:p_group => group, :repetition => rep), :jobname => id}
+        {:inputs => options.merge(:p_group => group, :p_file => file, :repetition => rep), :jobname => id}
       end
     end.flatten
   end
@@ -129,4 +141,7 @@ module Covid19
     job.clean.produce
     job.file('output').glob("**/*")
   end
+
+  dep :sample_info
+  dep_task :pilot, Covid19, :meta_analysis, :meta_file => :sample_info
 end
