@@ -1,0 +1,15 @@
+%h1 Covid19
+
+- require 'rbbt/util/ssh'
+- servers = %w(turbo mn1)
+- sample_info = Covid19.job(:sample_info).run
+
+%ul
+  - sample_info.each do |sample, group|
+    %li
+      = sample
+      - data_servers = servers.select{|s| SSHLine.workflow(s, 'Covid19', "puts Covid19.GSE145926.glob('*#{sample}*feature*').any?").strip == 'true' }
+      Data in:
+      = data_servers * ", "
+
+
