@@ -1,0 +1,22 @@
+Covid19=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *.txt *.conf" {
+ workflow.rb
+ bin=bin filter="*"{
+ }
+ lib=lib {
+  rbbt=rbbt{
+   sources=sources{
+    Covid19.rb
+   }
+  }
+ }
+ test=test {
+  test_helper.rb
+ }
+ data=data filter="*"{
+ }
+ www=www{
+  views=views{
+   main.haml
+  }
+ }
+}
