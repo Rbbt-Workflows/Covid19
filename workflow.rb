@@ -105,8 +105,8 @@ module Covid19
   dep :PhysiBoSS, :max_time => 100, :p_group => :placeholder, :repetition => :placeholder do |jobname,options|
 
     metadata_file = options[:meta_file]
-    if Step === metadata_file || Open.read(metadata_file).start_with?("#")
-      tsv = TSV.open(metadata_file)
+    if Step === metadata_file || metadata_file.load.start_with?("#")
+      tsv = metadata_file.load
     else
       tsv = TSV.open(metadata_file, :header_hash => '', :type => :single)
     end
