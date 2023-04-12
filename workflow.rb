@@ -100,7 +100,7 @@ module Covid19
   desc <<~EOF
   Conduct a meta-analysis over a set of patients
   EOF
-  input :meta_file, :file, "Metadata file"
+  input :meta_file, :path, "Metadata file", nil, :nofile => true
   input :repetitions, :integer, "Repetitions for PhysiBoSS", 2
   dep :PhysiBoSS, :max_time => 100, :p_group => :placeholder, :repetition => :placeholder do |jobname,options|
 
@@ -138,7 +138,7 @@ module Covid19
     options[:out_dir] = results_dir
     options[:verbose] = 0
     job = PerMedCoE.job(:meta_analysis_BB, clean_name, options)
-    job.clean.produce
+    job.produce
     job.file('output').glob("**/*")
   end
 
