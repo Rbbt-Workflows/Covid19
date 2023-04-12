@@ -14,8 +14,17 @@ module Covid19
 
 
   Covid19.claim Covid19.GSE145926, :proc do |directory|
-    url = "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE145926\&format=file" 
+    url = "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE145926\&format=file"
     Misc.untar(Open.open(url), directory)
+    nil
+  end
+
+  Covid19.claim Covid19.models.epithelial_cell_2, :proc do |directory|
+    Open.mkdir directory
+    Rbbt.data.glob("epithelial_cell_2.*").each do |file|
+      iii [file, File.dirname(directory)]
+      Open.cp file, File.join(File.dirname(directory), File.basename(file))
+    end
     nil
   end
 end

@@ -54,7 +54,7 @@ module Covid19
     :model_folder => nil, :genes_druggable => nil, :genes_target => nil
   dep :single_cell_processing
   dep_task :personalize_single_cell_patient, PerMedCoE, :personalize_patient_BB, 
-    :model_prefix => DATA_DIR['epithelial_cell_2'].find, :t => "T", 
+    :model_prefix => Covid19.models.epithelial_cell_2, :t => "T", 
     :positional => 'default', :expression => nil, :cnv => nil, :mutation => nil, :cell_type => nil,:model_bnd => nil, :model_cfg => nil,
     :ko => :placeholder, :norm_data => :placeholder, :cells => :placeholder  do |jobname,options,dependencies|
 
