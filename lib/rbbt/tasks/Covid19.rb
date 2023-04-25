@@ -29,7 +29,7 @@ def main():
           model_output_dir = output_dir[sample]
           Open.mkdir model_output_dir
           Open.mkdir model_output_dir
-          Open.mkdir model_output_dir.tmp
+          Open.mkdir model_output_dir.tmpdir
           pycompss_script +=<<-EOF
 # PHYSIBOSS
   results_dir = "#{physiboss_results}"
@@ -42,7 +42,7 @@ def main():
             results_dir=results_dir,
             max_time=#{max_time},
             parallel=1,
-            tmpdir="#{model_output_dir.tmp}")
+            tmpdir="#{model_output_dir.tmpdir}")
   physiboss_results.append(results_dir)
           EOF
         end
@@ -58,7 +58,6 @@ if __name__ == '__main__':
     EOF
 
     cpus = config(:cpus, :runcompss, :default => 4)
-    ppp pycompss_script
     TmpFile.with_file(pycompss_script, :extension => 'py') do |script|
       CMD.cmd_log("runcompss #{script}")
     end
@@ -81,12 +80,12 @@ if __name__ == '__main__':
 
     tsv.collect do |sample,values|
       group, file = values
-      {:inputs => options.merge(:p_group => group, :p_file => file), :jobname => sample}
+      {:inputs => options.merge(:p_group => group, :p_file => Path.setup(file)), :jobname => sample}
     end
   end
   dep :pycompss_physiboss do |jobname,options,dependencies|
     personalized = dependencies.flatten.select{|dep| dep.task_name.to_sym == :personalize_single_cell_patient }
-    models = personalized.collect{|d| "" + d.file('output/model_output_dir') }
+    models = personalized.collect{|d| Rbbt.identify(d.file('output/model_output_dir')) }
     {:inputs => options.merge(:patient_models => models), :jobname => jobname}
   end
   task :hybrid_meta_analysis => :array do 

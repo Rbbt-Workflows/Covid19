@@ -37,7 +37,7 @@ module Covid19
         file = Covid19.GSE145926.produce.glob("*_#{jobname}_*.h5").first 
         file = Rbbt.identify(file)
         raise ParameterException, "File not found for sample id #{jobname} (jobname)" if file.nil?
-        options[:p_file] = file
+        options[:p_file] = Path.setup(file)
       end
 
       {:inputs => options}
@@ -112,7 +112,7 @@ module Covid19
     tsv.collect do |id,values|
       group, file = values
       options[:repetitions].times.collect do |rep|
-        {:inputs => options.merge(:p_group => group, :p_file => file, :repetition => rep), :jobname => id}
+        {:inputs => options.merge(:p_group => group, :p_file => Path.setup(file), :repetition => rep), :jobname => id}
       end
     end.flatten
   end
