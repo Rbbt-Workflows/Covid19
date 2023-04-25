@@ -10,7 +10,6 @@ Workflow.require_workflow "PerMedCoE"
 module Covid19
   extend Workflow
 
-  DATA_DIR=Rbbt.data
 
   desc <<~EOF
   Known sample info in GSE145926 dataset
@@ -36,7 +35,7 @@ module Covid19
 
       if options[:p_file].nil?
         file = Covid19.GSE145926.produce.glob("*_#{jobname}_*.h5").first 
-        file = Covid19.identify(file)
+        file = Rbbt.identify(file)
         raise ParameterException, "File not found for sample id #{jobname} (jobname)" if file.nil?
         options[:p_file] = file
       end
@@ -50,7 +49,7 @@ module Covid19
   personalize a patient
   EOF
   dep PerMedCoE, :MaBoSS_BB, :jobname => "Default",
-    :positional => 'default', :model => 'epithelial_cell_2', :data_folder => DATA_DIR,
+    :positional => 'default', :model => 'epithelial_cell_2', :data_folder => Covid19.models,
     :model_folder => nil, :genes_druggable => nil, :genes_target => nil
   dep :single_cell_processing
   dep_task :personalize_single_cell_patient, PerMedCoE, :personalize_patient_BB, 
@@ -78,7 +77,7 @@ module Covid19
       options[:sample] = jobname
       options[:prefix] = jobname
 
-      personalized_model = "output/model_output_dir/#{File.basename(patient.recursive_inputs[:model_prefix])}_personalized"
+      personalized_model = "output/model_output_dir/#{File.basename(patient.step(:personalize_patient_BB).inputs[:model_prefix])}_personalized"
       options[:bnd_file] = patient.file(personalized_model + '.bnd')
       options[:cfg_file] = patient.file(personalized_model + '.cfg')
       jobs = [{:inputs => options.dup}]

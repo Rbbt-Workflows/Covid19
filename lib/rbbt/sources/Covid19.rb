@@ -22,7 +22,6 @@ module Covid19
   Covid19.claim Covid19.models.epithelial_cell_2, :proc do |directory|
     Open.mkdir directory
     Rbbt.data.glob("epithelial_cell_2.*").each do |file|
-      iii [file, File.dirname(directory)]
       Open.cp file, File.join(File.dirname(directory), File.basename(file))
     end
     nil
