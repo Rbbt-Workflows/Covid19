@@ -7,6 +7,9 @@ Covid19=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *.
    sources=sources{
     Covid19.rb
    }
+   tasks=tasks{
+    Covid19.rb
+   }
   }
  }
  test=test {

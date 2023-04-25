@@ -17,13 +17,13 @@ module Covid19
   EOF
   task :sample_info => :tsv do
     tsv = Rbbt.data.metadata.tsv :header_hash => "", :type => :list
-    tsv.delete_if{|s,v| s != "C141" }
-    tsv.key_field = "Sample"
-    tsv.fields = ["Group", "File"]
-    tsv.process "File" do |file|
+    tsv.delete_if{|k,v| k == 'C146' }
+    tsv.key_field = "id"
+    tsv.fields = ["group", "file"]
+    tsv.process "file" do |file|
       Covid19.GSE145926[File.basename(file)]
     end
-    tsv
+    tsv.to_s :preamble => false, :header_hash => ''
   end
 
   desc <<~EOF
@@ -101,14 +101,14 @@ module Covid19
   Conduct a meta-analysis over a set of patients
   EOF
   input :meta_file, :path, "Metadata file", nil, :nofile => true
-  input :repetitions, :integer, "Repetitions for PhysiBoSS", 2
+  input :repetitions, :integer, "Repetitions for PhysiBoSS", 5
   dep :PhysiBoSS, :max_time => 100, :p_group => :placeholder, :repetition => :placeholder do |jobname,options|
 
     metadata_file = options[:meta_file]
     if Step === metadata_file || metadata_file.load.start_with?("#")
-      tsv = metadata_file.load
+      tsv = metadata_file.produce.path.tsv :type => :list, :header_hash => ''
     else
-      tsv = TSV.open(metadata_file, :header_hash => '', :type => :single)
+      tsv = TSV.open(metadata_file, :header_hash => '', :type => :list)
     end
     tsv.collect do |id,values|
       group, file = values
@@ -136,7 +136,7 @@ module Covid19
     options[:reps] = options[:repetitions]
     options[:model_prefix] = recursive_inputs[:model_prefix]
     options[:out_dir] = results_dir
-    options[:verbose] = 0
+    options[:verbose] = 1
     job = PerMedCoE.job(:meta_analysis_BB, clean_name, options)
     job.produce
     job.file('output').glob("**/*")
@@ -145,3 +145,5 @@ module Covid19
   dep :sample_info
   dep_task :pilot, Covid19, :meta_analysis, :meta_file => :sample_info
 end
+
+require 'rbbt/tasks/Covid19'
