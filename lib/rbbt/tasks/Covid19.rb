@@ -16,10 +16,12 @@ def main():
     max_time = 100
     patient_model_info = {}
     output_dir = file('results_dir')
+    samplesids = []
     patient_models.each do |model_dir|
       Path.setup(model_dir)
-      model_dir = model_dir.find
       sample = Misc.digest(model_dir)
+      sampleids << sample
+      model_dir = model_dir.find
       model_files = model_dir.glob("*.bnd")
       model_files.each do |model_file|
         prefix = File.basename(model_file).sub('.bnd','')
@@ -48,6 +50,8 @@ def main():
         end
       end
     end
+    
+    save_info :samplesids, samplesids
 
     pycompss_script +=<<-EOF
   for physiboss_result in physiboss_results:
@@ -94,20 +98,24 @@ if __name__ == '__main__':
     physi = dependencies.last
     personal = dependencies[0..-1]
 
-    id2sample = {}
-    personal.each do |dep|
-      model_dir = dep.file('output').model_output_dir
-      id = Misc.digest(model_dir)
-      id2sample[id] = dep.clean_name
-    end
+    names = personal.collect{|d| d.clean_name }
+    sampleids = physi.info[:sampleids]
+
+    id2sample = Misc.zip2hash(samplesids, names)
 
     physi.file('results_dir').glob("*").each do |sample_dir|
-      id = File.basename(sample_dir)
-      sample = id2sample[id]
       sample_dir.physiboss_results.glob("*").each do |physi_dir|
-        prefix = File.basename(physi_dir)
-        target = results_dir[sample].physiboss_results[prefix]
-        Open.cp physi_dir, target
+        model_name = File.basename(physi_dir)
+        rep = model_name.scan(/_run_(\d+)$/)[1]
+        id = physi_dir.split("/")[-3]
+        sample = id2sample[id]
+        iii [physi_dir, rep, id, sample]
+        raise
+        model = File.basename(phy_bb.inputs[:bnd_file]).sub('.bnd','')
+        rep = phy_bb.recursive_inputs[:repetition]
+        filename = [model, 'physiboss_run', rep.to_i + 1] * "_"
+        target = results_dir[sample].physiboss_results[filename]
+        Open.cp phy_bb.file('output').results_dir, target
       end
     end
 
