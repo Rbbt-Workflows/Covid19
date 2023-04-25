@@ -16,11 +16,11 @@ def main():
     max_time = 100
     patient_model_info = {}
     output_dir = file('results_dir')
-    samplesids = []
+    sample_ids = []
     patient_models.each do |model_dir|
       Path.setup(model_dir)
       sample = Misc.digest(model_dir)
-      sampleids << sample
+      sample_ids << sample
       model_dir = model_dir.find
       model_files = model_dir.glob("*.bnd")
       model_files.each do |model_file|
@@ -51,7 +51,7 @@ def main():
       end
     end
     
-    save_info :samplesids, samplesids
+    set_info :sample_ids, sample_ids
 
     pycompss_script +=<<-EOF
   for physiboss_result in physiboss_results:
@@ -99,9 +99,9 @@ if __name__ == '__main__':
     personal = dependencies[0..-1]
 
     names = personal.collect{|d| d.clean_name }
-    sampleids = physi.info[:sampleids]
+    sample_ids = physi.info[:sample_ids]
 
-    id2sample = Misc.zip2hash(samplesids, names)
+    id2sample = Misc.zip2hash(sample_ids, names)
 
     physi.file('results_dir').glob("*").each do |sample_dir|
       sample_dir.physiboss_results.glob("*").each do |physi_dir|
