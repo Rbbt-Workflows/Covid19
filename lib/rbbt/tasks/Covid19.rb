@@ -109,13 +109,10 @@ if __name__ == '__main__':
         rep = model_name.scan(/_run_(\d+)$/)[1]
         id = physi_dir.split("/")[-3]
         sample = id2sample[id]
-        iii [physi_dir, rep, id, sample]
-        raise
-        model = File.basename(phy_bb.inputs[:bnd_file]).sub('.bnd','')
-        rep = phy_bb.recursive_inputs[:repetition]
+        model = model_name.match(/(.*)_physi/)[1]
         filename = [model, 'physiboss_run', rep.to_i + 1] * "_"
         target = results_dir[sample].physiboss_results[filename]
-        Open.cp phy_bb.file('output').results_dir, target
+        Open.cp physi_dir, target
       end
     end
 
