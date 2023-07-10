@@ -1,6 +1,3 @@
-require 'rbbt-util'
-require 'rbbt/workflow'
-
 Misc.add_libdir if __FILE__ == $0
 
 require 'rbbt/sources/Covid19'
@@ -15,27 +12,29 @@ module Covid19
   Known sample info in GSE145926 dataset
   EOF
   task :sample_info => :tsv do
-    tsv = Rbbt.data.metadata.tsv :header_hash => "", :type => :list
+    file = Rbbt.data.metadata
+    tsv = file.tsv :header_hash => "", :type => :list
     tsv.delete_if{|k,v| k == 'C146' }
     tsv.key_field = "id"
     tsv.fields = ["group", "file"]
     tsv.process "file" do |file|
       Covid19.GSE145926[File.basename(file)]
     end
-    tsv.to_s :preamble => false, :header_hash => ''
+    tsv
   end
 
   desc <<~EOF
   Process single cell data for a patient
   EOF
   dep_task :single_cell_processing, PerMedCoE, :single_cell_processing_BB, 
-    :p_id => :jobname do |jobname,options|
+    :p_id => :jobname,
+    :p_file => nil do |jobname,options|
 
       options[:p_id] = jobname
 
       if options[:p_file].nil?
         file = Covid19.GSE145926.produce.glob("*_#{jobname}_*.h5").first 
-        file = Rbbt.identify(file)
+        #file = Rbbt.identify(file)
         raise ParameterException, "File not found for sample id #{jobname} (jobname)" if file.nil?
         options[:p_file] = Path.setup(file)
       end
@@ -104,17 +103,22 @@ module Covid19
   dep :PhysiBoSS, :max_time => 100, :p_group => :placeholder, :repetition => :placeholder do |jobname,options|
 
     metadata_file = options[:meta_file]
-    if Step === metadata_file || metadata_file.load.start_with?("#")
-      tsv = metadata_file.produce.path.tsv :type => :list, :header_hash => ''
+    if TSV === metadata_file
+      tsv = metadata_file
+    elsif (Step === metadata_file && metadata_file.load.start_with?("#"))
+      tsv = metadata_file.produce.path.tsv :type => :list
     else
-      tsv = TSV.open(metadata_file, :header_hash => '', :type => :list)
+      tsv = TSV.open(metadata_file, :type => :list)
     end
-    tsv.collect do |id,values|
+
+    jobs = tsv.collect do |id,values|
       group, file = values
       options[:repetitions].times.collect do |rep|
-        {:inputs => options.merge(:p_group => group, :p_file => Path.setup(file), :repetition => rep), :jobname => id}
+        {:inputs => options.merge(:p_group => group, :p_file => Path.setup(file), :repetition => rep), :jobname => id, :id => id}
       end
-    end.flatten
+    end.flatten.compact
+
+    jobs
   end
   task :meta_analysis => :array do 
 
@@ -131,12 +135,16 @@ module Covid19
       end
 
     options = inputs.to_hash
+    meta_file = file('metadata.tsv')
+    Open.write(meta_file, options[:meta_file].to_s(header_hash: '', preamble: false))
+    options[:meta_file] = meta_file
     options[:ko_file] = step(:MaBoSS_BB).join.file('output').ko_file
     options[:reps] = options[:repetitions]
     options[:model_prefix] = recursive_inputs[:model_prefix]
     options[:out_dir] = results_dir
     options[:verbose] = 1
     job = PerMedCoE.job(:meta_analysis_BB, clean_name, options)
+    job.clean if job.error?
     job.produce
     job.file('output').glob("**/*")
   end
