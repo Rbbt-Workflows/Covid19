@@ -7,6 +7,8 @@ Workflow.require_workflow "PerMedCoE"
 module Covid19
   extend Workflow
 
+  Covid19.GSE145926.produce
+  Covid19.models.produce
 
   desc <<~EOF
   Known sample info in GSE145926 dataset
@@ -23,6 +25,13 @@ module Covid19
     tsv
   end
 
+  dep PerMedCoE, :MaBoSS_BB,
+    :positional => 'default', :model => 'epithelial_cell_2', :data_folder => Covid19.models,
+    :model_folder => nil, :genes_druggable => nil, :genes_target => nil
+  task :ko_file => :text do
+    step(:MaBoSS_BB).file('output/ko_file').read
+  end
+
   desc <<~EOF
   Process single cell data for a patient
   EOF
@@ -34,7 +43,7 @@ module Covid19
 
       if options[:p_file].nil?
         file = Covid19.GSE145926.produce.glob("*_#{jobname}_*.h5").first 
-        #file = Rbbt.identify(file)
+        file = Rbbt.identify(file)
         raise ParameterException, "File not found for sample id #{jobname} (jobname)" if file.nil?
         options[:p_file] = Path.setup(file)
       end
@@ -42,24 +51,21 @@ module Covid19
       {:inputs => options}
     end
 
-
   desc <<~EOF
   Use the single cell processing results in the MaBoSS knockouts to
   personalize a patient
   EOF
-  dep PerMedCoE, :MaBoSS_BB, :jobname => "Default",
-    :positional => 'default', :model => 'epithelial_cell_2', :data_folder => Covid19.models,
-    :model_folder => nil, :genes_druggable => nil, :genes_target => nil
+  dep :ko_file, :jobname => "Default"
   dep :single_cell_processing
   dep_task :personalize_single_cell_patient, PerMedCoE, :personalize_patient_BB, 
-    :model_prefix => Covid19.models.epithelial_cell_2, :t => "T", 
+    :model_prefix => Covid19.models.epithelial_cell_2, :t => "T", :ko => :ko_file, 
     :positional => 'default', :expression => nil, :cnv => nil, :mutation => nil, :cell_type => nil,:model_bnd => nil, :model_cfg => nil,
     :ko => :placeholder, :norm_data => :placeholder, :cells => :placeholder  do |jobname,options,dependencies|
 
       maboss, single_cell = dependencies.flatten
       options[:norm_data] = single_cell.file('output').norm_data
       options[:cells] = single_cell.file('output').cells_metadata
-      options[:ko] = maboss.file('output').ko_file
+      #options[:ko] = maboss.file('output').ko_file
       {:inputs => options}
     end
 
@@ -91,7 +97,7 @@ module Covid19
       jobs
     end
   task :PhysiBoSS => :array do
-    dependencies.select{|d| d.task_name == :PhysiBoSS_BB}.collect{|d| d.load }.flatten
+    dependencies.select{|d| d.task_name.to_sym == :PhysiBoSS_BB}.collect{|d| d.load }.flatten
   end
 
 
@@ -105,7 +111,7 @@ module Covid19
     metadata_file = options[:meta_file]
     if TSV === metadata_file
       tsv = metadata_file
-    elsif (Step === metadata_file && metadata_file.load.start_with?("#"))
+    elsif Step === metadata_file
       tsv = metadata_file.produce.path.tsv :type => :list
     else
       tsv = TSV.open(metadata_file, :type => :list)
@@ -123,6 +129,7 @@ module Covid19
   task :meta_analysis => :array do 
 
     results_dir = file('results_dir')
+    Open.mkdir results_dir
     rec_dependencies
       .select{|d| d.task_name == :PhysiBoSS_BB }
       .each do |phy_bb|
@@ -136,7 +143,9 @@ module Covid19
 
     options = inputs.to_hash
     meta_file = file('metadata.tsv')
-    Open.write(meta_file, options[:meta_file].to_s(header_hash: '', preamble: false))
+    meta = options[:meta_file]
+    meta = meta.load if Step === meta
+    Open.write(meta_file, meta.to_s(header_hash: '', preamble: false))
     options[:meta_file] = meta_file
     options[:ko_file] = step(:MaBoSS_BB).join.file('output').ko_file
     options[:reps] = options[:repetitions]
