@@ -28,8 +28,8 @@ module Covid19
   dep PerMedCoE, :MaBoSS_BB,
     :positional => 'default', :model => 'epithelial_cell_2', :data_folder => Covid19.models,
     :model_folder => nil, :genes_druggable => nil, :genes_target => nil
-  task :ko_file => :text do
-    step(:MaBoSS_BB).file('output/ko_file').read
+  task :ko_file => :array do
+    step(:MaBoSS_BB).file('output/ko_file').read.split("\n")
   end
 
   desc <<~EOF
@@ -60,7 +60,7 @@ module Covid19
   dep_task :personalize_single_cell_patient, PerMedCoE, :personalize_patient_BB, 
     :model_prefix => Covid19.models.epithelial_cell_2, :t => "T", :ko => :ko_file, 
     :positional => 'default', :expression => nil, :cnv => nil, :mutation => nil, :cell_type => nil,:model_bnd => nil, :model_cfg => nil,
-    :ko => :placeholder, :norm_data => :placeholder, :cells => :placeholder  do |jobname,options,dependencies|
+    :norm_data => :placeholder, :cells => :placeholder  do |jobname,options,dependencies|
 
       maboss, single_cell = dependencies.flatten
       options[:norm_data] = single_cell.file('output').norm_data
@@ -78,7 +78,7 @@ module Covid19
     :bnd_file => :placeholder, :cfg_file => :placeholder, :sample => :placeholder, :prefix => :placeholder  do |jobname,options,dependencies|
 
       patient = dependencies.flatten.first
-      maboss = patient.step(:MaBoSS_BB)
+      ko_file = patient.step(:ko_file)
       options[:sample] = jobname
       options[:prefix] = jobname
 
@@ -87,7 +87,7 @@ module Covid19
       options[:cfg_file] = patient.file(personalized_model + '.cfg')
       jobs = [{:inputs => options.dup}]
 
-      maboss.produce.file('output').ko_file.list.each do |ko|
+      ko_file.load.each do |ko|
         personalized_model = "output/model_output_dir/#{File.basename(patient.recursive_inputs[:model_prefix])}_personalized__#{ko}_ko"
         options[:bnd_file] = patient.file(personalized_model + '.bnd')
         options[:cfg_file] = patient.file(personalized_model + '.cfg')
