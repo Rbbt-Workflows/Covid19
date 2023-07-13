@@ -10,13 +10,18 @@ module Covid19
   Covid19.GSE145926.produce
   Covid19.models.produce
 
+  input :samples, :array, "Sample to include"
   desc <<~EOF
   Known sample info in GSE145926 dataset
   EOF
-  task :sample_info => :tsv do
+  task :sample_info => :tsv do |samples|
     file = Rbbt.data.metadata
     tsv = file.tsv :header_hash => "", :type => :list
-    tsv.delete_if{|k,v| k == 'C146' }
+    if samples
+      tsv.delete_if{|k,v| ! samples.include?(k) }
+    else
+      tsv.delete_if{|k,v| k == 'C146' }
+    end
     tsv.key_field = "id"
     tsv.fields = ["group", "file"]
     tsv.process "file" do |file|
@@ -62,10 +67,10 @@ module Covid19
     :positional => 'default', :expression => nil, :cnv => nil, :mutation => nil, :cell_type => nil,:model_bnd => nil, :model_cfg => nil,
     :norm_data => :placeholder, :cells => :placeholder  do |jobname,options,dependencies|
 
-      maboss, single_cell = dependencies.flatten
+      ko_file, single_cell = dependencies.flatten
       options[:norm_data] = single_cell.file('output').norm_data
       options[:cells] = single_cell.file('output').cells_metadata
-      #options[:ko] = maboss.file('output').ko_file
+      options[:ko] = ko_file.path
       {:inputs => options}
     end
 
@@ -106,7 +111,7 @@ module Covid19
   EOF
   input :meta_file, :path, "Metadata file", nil, :nofile => true
   input :repetitions, :integer, "Repetitions for PhysiBoSS", 5
-  dep :PhysiBoSS, :max_time => 100, :p_group => :placeholder, :repetition => :placeholder do |jobname,options|
+  dep :PhysiBoSS, :p_group => :placeholder, :repetition => :placeholder do |jobname,options|
 
     metadata_file = options[:meta_file]
     if TSV === metadata_file
@@ -145,6 +150,7 @@ module Covid19
     meta_file = file('metadata.tsv')
     meta = options[:meta_file]
     meta = meta.load if Step === meta
+    meta = meta.tsv if Path === meta
     Open.write(meta_file, meta.to_s(header_hash: '', preamble: false))
     options[:meta_file] = meta_file
     options[:ko_file] = step(:MaBoSS_BB).join.file('output').ko_file
@@ -159,7 +165,7 @@ module Covid19
   end
 
   dep :sample_info
-  dep_task :pilot, Covid19, :meta_analysis, :meta_file => :sample_info
+  dep_task :pilot, Covid19, :meta_analysis, :meta_file => :sample_info, :max_time => 100
 end
 
 require 'rbbt/tasks/Covid19'
