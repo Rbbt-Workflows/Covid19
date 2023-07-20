@@ -22,7 +22,7 @@ module Covid19
 
   Covid19.claim Covid19.models, :proc do |directory|
     Open.mkdir directory
-    Rbbt.data.glob("*").each do |file|
+    Rbbt.data.find(:lib).glob("*").each do |file|
       FileUtils.cp_r file, directory
     end
   end
