@@ -143,7 +143,7 @@ module Covid19
         rep = phy_bb.recursive_inputs[:repetition]
         filename = [model, 'physiboss_run', rep.to_i + 1] * "_"
         target = results_dir[sample].physiboss_results[filename]
-        Open.cp phy_bb.file('output').results_dir, target
+        Open.link phy_bb.file('output').results_dir, target
       end
 
     options = inputs.to_hash
@@ -165,7 +165,7 @@ module Covid19
   end
 
   dep :sample_info
-  dep_task :pilot, Covid19, :meta_analysis, :meta_file => :sample_info, :max_time => 100
+  dep_task :pilot, Covid19, :meta_analysis, :meta_file => :sample_info, :max_time => 200
 end
 
 require 'rbbt/tasks/Covid19'
