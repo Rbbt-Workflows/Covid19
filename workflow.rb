@@ -30,6 +30,9 @@ module Covid19
     tsv
   end
 
+  desc <<~EOF
+  Nodes in the model potentially interesting as knock-out targets
+  EOF
   dep PerMedCoE, :MaBoSS_BB,
     :positional => 'default', :model => 'epithelial_cell_2', :data_folder => Covid19.models,
     :model_folder => nil, :genes_druggable => nil, :genes_target => nil
@@ -164,8 +167,11 @@ module Covid19
     job.file('output').glob("**/*")
   end
 
+  desc <<-EOF
+  Run the entire workflow with default parameters
+  EOF
   dep :sample_info
   dep_task :pilot, Covid19, :meta_analysis, :meta_file => :sample_info, :max_time => 200
 end
 
-require 'rbbt/tasks/Covid19'
+#require 'rbbt/tasks/Covid19'
